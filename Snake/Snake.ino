@@ -32,13 +32,13 @@ LedControl disp = LedControl(dataIn, CLK, loadCS, 1);
  */
 
 
-
 enum Directions selectedDirection = UP;
 enum Directions movementDirection = UP;
 
 bool isCoordEqual(Coord coord1, Coord coord2){
   return (coord1.x == coord2.x) && (coord1.y == coord2.y);
 }
+
 
 // snake body
 Coord body[MAX_BODY_LENGTH] = {};
@@ -134,6 +134,12 @@ enum boardObjects checkCoord(Coord body[], int bodyLength, Coord foodLocation, C
 Coord foodLocation;
 
 void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
+  // Spawns a single unit of food at a random location.
+  // INPUT:
+  //  foodLocation = Stores the coordinate of the food.
+  //  body = The snake body.
+  //  bodylength = The length of the snake body.
+  
   Coord location;
 
   do {
@@ -188,14 +194,16 @@ void loop() {
     }
   }
 
+  // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
     movementDirection = selectedDirection;
   }
 
-  // check coord
+  // check coordinate at direction
   Coord coordToCheck = getCoordFromDirection(body, movementDirection);
   enum boardObjects objectAtCoord = checkCoord(body, bodyLength, foodLocation, coordToCheck);
 
+  // process object at coordinate
   if (objectAtCoord == SPACE){
     // move snake
     propogate(body, bodyLength, coordToCheck);
