@@ -1,8 +1,8 @@
 # include <LedControl.h>
 # include "snakeEnums.h"
-# define MAX_BODY_LENGTH 10
-# define INITIAL_BODY_LENGTH 5
-# define FOOD_SPAWN_LIMIT 1
+# define MAX_BODY_LENGTH 20
+# define INITIAL_BODY_LENGTH 3
+# define REFRESH_RATE 200
 
 // Documentation:
 // http://wayoda.github.io/LedControl/pages/software
@@ -41,6 +41,16 @@ LedControl disp = LedControl(dataIn, CLK, loadCS, 1);
  * The whole thing is referred to as the body sometimes.
  */
 
+int score = 0;
+
+void displayScore(int score){
+  for (int i = 0; i < score; i++){
+    disp.setLed(0, i / 8, i % 8, true);
+    delay(500);
+  }
+
+  delay(2000);
+}
 
 enum Directions selectedDirection = UP;
 enum Directions movementDirection = UP;
@@ -165,6 +175,42 @@ void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
   disp.setLed(0, foodLocation->x, foodLocation->y, true);
 }
 
+void spawnBody(Coord body[], int *bodyLength){
+  *bodyLength = INITIAL_BODY_LENGTH; 
+  
+  body[0].x = 5;
+  body[0].y = 5;
+
+  disp.setLed(0, body[0].x, body[0].y, true);
+//  for (int i = 0; i < bodyLength; i++){
+//    body[i].x = 3;
+//    body[i].y = i + 2;
+//    disp.setLed(0, body[i].x, body[i].y, true);
+//  }
+}
+
+void despawnBody(Coord body[], int bodyLength){
+  for (int i = 0; i < bodyLength; i++){
+    disp.setLed(0, body[i].x, body[i].y, false);
+  }
+}
+
+void blinkBody(Coord body[], int bodyLength){
+  int i;
+  
+  for (i = 0; i < bodyLength; i++){
+    disp.setLed(0, body[i].x, body[i].y, false);
+  }
+
+  delay(REFRESH_RATE * 2);
+
+  for (i = 0; i < bodyLength; i++){
+    disp.setLed(0, body[i].x, body[i].y, true);
+  }
+
+  delay(REFRESH_RATE * 2);
+}
+
 void setup() {
   Serial.begin(9600);
 
@@ -181,11 +227,7 @@ void setup() {
   disp.clearDisplay(0);
 
   // generate snake body
-  for (int i = 0; i < bodyLength; i++){
-    body[i].x = 3;
-    body[i].y = i + 2;
-    disp.setLed(0, body[i].x, body[i].y, true);
-  }
+  spawnBody(body, &bodyLength);
 
   // spawn test food
   spawnFood(&foodLocation, body, bodyLength);
@@ -214,21 +256,21 @@ void loop() {
 
 //  SW = digitalRead(SWPin);
 //
-  Serial.print(X);
-  Serial.print(",");
-  Serial.println(Y);
+//  Serial.print(X);
+//  Serial.print(",");
+//  Serial.println(Y);
 //  Serial.print(",");
 //  Serial.println(SW * 1023);
 
-//  if (X < 500){
-//    selectedDirection = LEFT;
-//  } else if (X > 900){
-//    selectedDirection = RIGHT;
-//  } else if (Y > 600){
-//    selectedDirection = DOWN;
-//  } else if (Y < 100){
-//    selectedDirection = UP;
-//  }
+  if (Y > 550){
+    selectedDirection = DOWN;
+  } else if (Y < 150){
+    selectedDirection = UP;
+  } else if (X < 500){
+    selectedDirection = LEFT;
+  } else if (X > 700){
+    selectedDirection = RIGHT;
+  } 
 
   // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
@@ -245,11 +287,22 @@ void loop() {
     // move snake
     propogate(body, bodyLength, coordToCheck);
   } else if (objectAtCoord == BODY){
+    // game over
+        
+    blinkBody(body, bodyLength);
+    blinkBody(body, bodyLength);
+    blinkBody(body, bodyLength);
+    
+    despawnBody(body, bodyLength);
+
+    displayScore(score);
+    
+    spawnBody(body, &bodyLength);
     
     delay(5000);
-    // game over
-  } else if (objectAtCoord == FOOD){
     
+  } else if (objectAtCoord == FOOD){
+        
     if (bodyLength < MAX_BODY_LENGTH){
       bodyLength++;
     }
@@ -259,8 +312,11 @@ void loop() {
 
     // respawn food
     spawnFood(&foodLocation, body, bodyLength);
+
+    // add to score
+    score++;
   }
   
   // buffer
-  delay(500);
+  delay(REFRESH_RATE);
 }
