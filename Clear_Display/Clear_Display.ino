@@ -19,5 +19,4 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  disp.setChar(0, 0, 1, false);
 }

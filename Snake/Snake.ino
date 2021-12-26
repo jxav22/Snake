@@ -1,11 +1,14 @@
 # include <LedControl.h>
 # include "snakeEnums.h"
-# define MAX_BODY_LENGTH 20
+# define MAX_BODY_LENGTH 30
 # define INITIAL_BODY_LENGTH 3
 # define REFRESH_RATE 200
 
 // Documentation:
 // http://wayoda.github.io/LedControl/pages/software
+
+// Set up passive buzzer
+int buzzerPin = 6;
 
 // Set up Joystick
 int XPin = A0;
@@ -50,6 +53,10 @@ void displayScore(int score){
   }
 
   delay(2000);
+
+  for (int i = 0; i < score; i++){
+    disp.setLed(0, i / 8, i % 8, false);
+  }
 }
 
 enum Directions selectedDirection = UP;
@@ -256,19 +263,20 @@ void loop() {
 
 //  SW = digitalRead(SWPin);
 //
-//  Serial.print(X);
-//  Serial.print(",");
-//  Serial.println(Y);
+  Serial.print(X);
+  Serial.print(",");
+  Serial.println(Y);
 //  Serial.print(",");
 //  Serial.println(SW * 1023);
 
+  // select direction with joystick
   if (Y > 550){
     selectedDirection = DOWN;
-  } else if (Y < 150){
+  } else if (Y < 450){
     selectedDirection = UP;
-  } else if (X < 500){
+  } else if (X < 450){
     selectedDirection = LEFT;
-  } else if (X > 700){
+  } else if (X > 550){
     selectedDirection = RIGHT;
   } 
 
@@ -283,8 +291,8 @@ void loop() {
 
   // process object at coordinate
   if (objectAtCoord == SPACE){
-    
     // move snake
+    
     propogate(body, bodyLength, coordToCheck);
   } else if (objectAtCoord == BODY){
     // game over
@@ -295,9 +303,15 @@ void loop() {
     
     despawnBody(body, bodyLength);
 
+    //despawn food
+    disp.setLed(0, foodLocation.x, foodLocation.y, false);
+
     displayScore(score);
-    
+
+    // respawn
+    score = 0;
     spawnBody(body, &bodyLength);
+    spawnFood(&foodLocation, body, bodyLength);
     
     delay(5000);
     
