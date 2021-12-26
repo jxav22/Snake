@@ -7,6 +7,16 @@
 // Documentation:
 // http://wayoda.github.io/LedControl/pages/software
 
+// Set up Joystick
+int XPin = A0;
+int X = 0;
+
+int YPin = A1;
+int Y = 0;
+
+int SWPin = 2;
+int SW = 2;
+
 // Set up LED matrix
 int dataIn = 12;
 int loadCS = 11;
@@ -157,6 +167,9 @@ void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
 
 void setup() {
   Serial.begin(9600);
+
+  // set up joystick button
+  pinMode(SWPin, INPUT_PULLUP);
   
   // wake up from power-saving mode
   disp.shutdown(0, false);
@@ -176,23 +189,46 @@ void setup() {
 
   // spawn test food
   spawnFood(&foodLocation, body, bodyLength);
+
+  
 }
 
 void loop() {
   // get direction from user
-  if (Serial.available() != 0){
-    String userInput = Serial.readString();
-    Serial.println(userInput);
-    if (userInput == "U"){
-      selectedDirection = UP;
-    } else if (userInput == "D"){
-      selectedDirection = DOWN;
-    } else if (userInput == "L"){
-      selectedDirection = LEFT;
-    } else if (userInput == "R"){
-      selectedDirection = RIGHT;
-    }
-  }
+//  if (Serial.available() != 0){
+//    String userInput = Serial.readString();
+//    Serial.println(userInput);
+//    if (userInput == "U"){
+//      selectedDirection = UP;
+//    } else if (userInput == "D"){
+//      selectedDirection = DOWN;
+//    } else if (userInput == "L"){
+//      selectedDirection = LEFT;
+//    } else if (userInput == "R"){
+//      selectedDirection = RIGHT;
+//    }
+//  }
+
+  X = analogRead(XPin);
+  Y = analogRead(YPin);
+
+//  SW = digitalRead(SWPin);
+//
+  Serial.print(X);
+  Serial.print(",");
+  Serial.println(Y);
+//  Serial.print(",");
+//  Serial.println(SW * 1023);
+
+//  if (X < 500){
+//    selectedDirection = LEFT;
+//  } else if (X > 900){
+//    selectedDirection = RIGHT;
+//  } else if (Y > 600){
+//    selectedDirection = DOWN;
+//  } else if (Y < 100){
+//    selectedDirection = UP;
+//  }
 
   // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
@@ -205,17 +241,23 @@ void loop() {
 
   // process object at coordinate
   if (objectAtCoord == SPACE){
+    
     // move snake
     propogate(body, bodyLength, coordToCheck);
   } else if (objectAtCoord == BODY){
+    
     delay(5000);
     // game over
   } else if (objectAtCoord == FOOD){
+    
     if (bodyLength < MAX_BODY_LENGTH){
       bodyLength++;
     }
+    
+    // move snake
     propogate(body, bodyLength, coordToCheck);
 
+    // respawn food
     spawnFood(&foodLocation, body, bodyLength);
   }
   
