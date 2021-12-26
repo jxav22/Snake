@@ -148,10 +148,15 @@ enum boardObjects checkCoord(Coord body[], int bodyLength, Coord foodLocation, C
   }
   
   // if coord is a body part
-  for (int i = 0; i < bodyLength; i++){
+  for (int i = 1; i < bodyLength - 1; i++){
     if (isCoordEqual(coord, body[i])){
        return BODY;
     }
+  }
+
+  // if coord is a tail
+  if (isCoordEqual(coord, body[bodyLength - 1])){
+    return TAIL;
   }
 
   // if coord is nothing
@@ -270,15 +275,25 @@ void loop() {
 //  Serial.println(SW * 1023);
 
   // select direction with joystick
-  if (Y > 550){
+//  if (Y > 550){
+//    selectedDirection = DOWN;
+//  } else if (Y < 450){
+//    selectedDirection = UP;
+//  } else if (X < 450){
+//    selectedDirection = LEFT;
+//  } else if (X > 550){
+//    selectedDirection = RIGHT;
+//  } 
+
+  if ( (Y > abs(X - 512) + 512) && (Y > 550) ){
     selectedDirection = DOWN;
-  } else if (Y < 450){
+  } else if ( (Y < -abs(X - 512) + 512 ) && (Y < 450) ){
     selectedDirection = UP;
-  } else if (X < 450){
+  } else if (X < 450) {
     selectedDirection = LEFT;
-  } else if (X > 550){
+  } else if (X > 550) {
     selectedDirection = RIGHT;
-  } 
+  }
 
   // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){

@@ -4,7 +4,7 @@ typedef struct {
 } Coord;
 
 enum Directions {UP, DOWN, LEFT, RIGHT};
-enum boardObjects {BODY, SPACE, FOOD};
+enum boardObjects {BODY, SPACE, FOOD, TAIL};
 
 Directions oppositeDirection(enum Directions inputDirection){
     switch (inputDirection){
