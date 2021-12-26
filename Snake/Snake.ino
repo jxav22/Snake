@@ -14,6 +14,8 @@ int X = 0;
 int YPin = A1;
 int Y = 0;
 
+Coord centre = {.x = 512, .y = 512};
+
 int SWPin = 2;
 int SW = 2;
 
@@ -255,9 +257,8 @@ void setup() {
   // generate snake body
   spawnBody(body, &bodyLength);
 
-  // spawn test food
+  // spawn food
   spawnFood(&foodLocation, body, bodyLength);
-
   
 }
 
@@ -298,9 +299,6 @@ void loop() {
   } 
 */
 
-  X = analogRead(XPin);
-  Y = analogRead(YPin);
-
 /*
 // CALIBRATE JOYSTICK
 //  SW = digitalRead(SWPin);
@@ -313,6 +311,7 @@ void loop() {
 //  Serial.println(SW * 1023);
 */
 
+/*
   // USER INPUT:  JOYSTICK METHOD (NEW)
 
   if ( (Y > abs(X - 512) + 512) && (Y > 550) ){
@@ -324,6 +323,49 @@ void loop() {
   } else if (X > 550) {
     selectedDirection = RIGHT;
   }
+*/
+
+for (int i = 0; i < REFRESH_RATE; i+= 10){
+  X = analogRead(XPin);
+  Y = analogRead(YPin);
+  
+  // USER INPUT: JOYSTICK METHOD (DYNAMIC)
+
+  if ( (Y > abs(X - 512) + 512) && (Y > 550) ){
+    selectedDirection = DOWN;
+  } else if ( (Y < -abs(X - 512) + 512 ) && (Y < 450) ){
+    selectedDirection = UP;
+  } else if (X < 450) {
+    selectedDirection = LEFT;
+  } else if (X > 550) {
+    selectedDirection = RIGHT;
+  }
+  
+  delay(10);
+}
+/*
+  for (int i = 0; i < REFRESH_RATE; i+= 10){
+    X = analogRead(XPin);
+    Y = analogRead(YPin);
+    
+    // USER INPUT: JOYSTICK METHOD (DYNAMIC)
+  
+    if ( (Y > abs(X - centre.x) + centre.x) && (Y > centre.y + 50) ){
+      selectedDirection = DOWN;
+    } else if ( (Y < -abs(X - centre.x) + centre.x) && (Y < centre.y - 50) ){
+      selectedDirection = UP;
+    } else if (X < 450){
+      selectedDirection = LEFT;
+    } else if (X > 550){
+      selectedDirection = RIGHT;
+    }
+    
+    delay(10);
+  }
+
+  centre.x = X;
+  centre.y = Y;
+*/
 
   // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
@@ -376,5 +418,5 @@ void loop() {
   } 
   
   // buffer
-  delay(REFRESH_RATE);
+  // delay(REFRESH_RATE);
 }
