@@ -1,35 +1,55 @@
 # include <LedControl.h>
+# include "snakeEnums.h"
 # define MAX_BODY_LENGTH 10
+# define INITIAL_BODY_LENGTH 5
+# define FOOD_SPAWN_LIMIT 1
 
 // Documentation:
 // http://wayoda.github.io/LedControl/pages/software
 
+// Set up LED matrix
 int dataIn = 12;
 int loadCS = 11;
 int CLK = 10;
 
 LedControl disp = LedControl(dataIn, CLK, loadCS, 1);
 
-int row = 0;
-int col = 0;
+// Set up game logic
 
-typedef struct {
-  int x;
-  int y;
-} Coord;
+/*
+ * SNAKE BODY ANATOMY REFERENCE:
+ * 
+ * (movement occurs here)
+ * <head>
+ * <neck>
+ * <body>
+ * <body>
+ * <body>
+ * ...
+ * <tail>
+ * 
+ * The whole thing is referred to as the body sometimes.
+ */
 
-// default snake body for testing
+
+
+enum Directions selectedDirection = UP;
+enum Directions movementDirection = UP;
+
+bool isCoordEqual(Coord coord1, Coord coord2){
+  return (coord1.x == coord2.x) && (coord1.y == coord2.y);
+}
+
+// snake body
 Coord body[MAX_BODY_LENGTH] = {};
-int bodyLength = 5;
+int bodyLength = INITIAL_BODY_LENGTH;
 
-Coord coordToCheck = {};
-
-enum directions {UP, DOWN, LEFT, RIGHT};
-enum directions selectedDirection = UP;
-
-void propogate(Coord coord){
+void propogate(Coord body[], int bodyLength, Coord coord){
   // Propogates the snake body to a coordinate.
-  // INPUT: coord = The coordinate to propogate to.
+  // INPUT: 
+  //  body = The body to propogate.
+  //  bodyLength = The length of the body to propogate.
+  //  coord = The coordinate to propogate to.
   
   // remove tail from display
   disp.setLed(0, body[bodyLength - 1].x, body[bodyLength - 1].y, false);
@@ -40,10 +60,93 @@ void propogate(Coord coord){
   }
   
   // add head to body array
-  body[0] = coordToCheck;
+  body[0] = coord;
   
   // display head
   disp.setLed(0, body[0].x, body[0].y, true);
+}
+
+Coord getCoordFromDirection(Coord body[], enum Directions selectedDirection){
+  // Gets a coordinate from the head of a body in the selected direction.
+  // INPUTS:
+  //  body = The body to use as reference.
+  //  selectedDirection = The direction to get a coordinate.
+  // OUTPUT:
+  //  The coordinate in the selected direction, relative to the body head.
+  
+  Coord coord;
+  
+  // get coord
+  switch (selectedDirection){
+    case UP:
+      coord.x = body[0].x - 1;
+      coord.y = body[0].y;
+      break;
+    case DOWN:
+      coord.x = body[0].x + 1;
+      coord.y = body[0].y;
+      break;
+    case LEFT:
+      coord.x = body[0].x;
+      coord.y = body[0].y - 1;
+      break;
+    case RIGHT:
+      coord.x = body[0].x;
+      coord.y = body[0].y + 1;
+      break;
+    default:
+      break;
+  }
+
+  // adjusts coord so it doesnt exceed the matrix boundries
+  coord.x = (coord.x % 8 + 8) % 8;
+  coord.y = (coord.y % 8 + 8) % 8;
+
+  return coord;
+}
+
+enum boardObjects checkCoord(Coord body[], int bodyLength, Coord foodLocation, Coord coord){
+  // Determines the object at the specified coordinate.
+  //  INPUT:
+  //    body = The snake body.
+  //    bodyLength = The length of the snake body.
+  //    coord = The coordinate to check.
+  //  OUTPUT:
+  //    An enum representing the object at the specified coordinate.
+
+  // if coord is food
+  if (isCoordEqual(coord, foodLocation)){
+    Serial.println("FOUND FOOD");
+    return FOOD;
+  }
+  
+  // if coord is a body part
+  for (int i = 0; i < bodyLength; i++){
+    if (isCoordEqual(coord, body[i])){
+       return BODY;
+    }
+  }
+
+  // if coord is nothing
+  return SPACE;
+}
+
+Coord foodLocation;
+
+void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
+  Coord location;
+
+  do {
+    location.x = random(0, 7);
+    location.y = random(0, 7);
+  } while (checkCoord(body, bodyLength, *foodLocation, location) != SPACE);
+  
+  // set location
+  foodLocation->x = location.x;
+  foodLocation->y = location.y;
+
+  // light LED
+  disp.setLed(0, foodLocation->x, foodLocation->y, true);
 }
 
 void setup() {
@@ -58,13 +161,15 @@ void setup() {
   // clear display
   disp.clearDisplay(0);
 
-  // generate test snake body
+  // generate snake body
   for (int i = 0; i < bodyLength; i++){
     body[i].x = 3;
-    body[i].y = i + 3;
+    body[i].y = i + 2;
     disp.setLed(0, body[i].x, body[i].y, true);
   }
-  
+
+  // spawn test food
+  spawnFood(&foodLocation, body, bodyLength);
 }
 
 void loop() {
@@ -83,44 +188,29 @@ void loop() {
     }
   }
 
-  // get coord to check
-  switch (selectedDirection){
-    case UP:
-      coordToCheck.x = body[0].x - 1;
-      coordToCheck.y = body[0].y;
-      break;
-    case DOWN:
-      coordToCheck.x = body[0].x + 1;
-      coordToCheck.y = body[0].y;
-      break;
-    case LEFT:
-      coordToCheck.x = body[0].x;
-      coordToCheck.y = body[0].y - 1;
-      break;
-    case RIGHT:
-      coordToCheck.x = body[0].x;
-      coordToCheck.y = body[0].y + 1;
-      break;
-    default:
-      break;
+  if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
+    movementDirection = selectedDirection;
   }
 
-  // adjusts coordToCheck so it doesnt exceed the matrix boundries
-  coordToCheck.x = (coordToCheck.x % 8 + 8) % 8;
-  coordToCheck.y = (coordToCheck.y % 8 + 8) % 8;
-
-  propogate(coordToCheck);
-
   // check coord
-  // if into neck
-  // do nothing
+  Coord coordToCheck = getCoordFromDirection(body, movementDirection);
+  enum boardObjects objectAtCoord = checkCoord(body, bodyLength, foodLocation, coordToCheck);
 
-  // if into body
-  // game over
+  if (objectAtCoord == SPACE){
+    // move snake
+    propogate(body, bodyLength, coordToCheck);
+  } else if (objectAtCoord == BODY){
+    delay(5000);
+    // game over
+  } else if (objectAtCoord == FOOD){
+    if (bodyLength < MAX_BODY_LENGTH){
+      bodyLength++;
+    }
+    propogate(body, bodyLength, coordToCheck);
 
-  // if into nothing
-  // propogate
-
+    spawnFood(&foodLocation, body, bodyLength);
+  }
+  
   // buffer
-  delay(1000);
+  delay(500);
 }
