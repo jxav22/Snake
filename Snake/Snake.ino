@@ -2,7 +2,7 @@
 # include "snakeEnums.h"
 # define MAX_BODY_LENGTH 30
 # define INITIAL_BODY_LENGTH 3
-# define REFRESH_RATE 200
+# define REFRESH_RATE 100
 
 // Documentation:
 // http://wayoda.github.io/LedControl/pages/software
@@ -14,10 +14,18 @@ int X = 0;
 int YPin = A1;
 int Y = 0;
 
-Coord centre = {.x = 512, .y = 512};
-
 int SWPin = 2;
 int SW = 2;
+
+Coord centre = {.x = 512, .y = 512};
+
+// set lower for more accuracy
+int joystickAccuracy = 20;
+
+void calibrateJoystick(){
+  centre.x = analogRead(XPin);
+  centre.y = analogRead(YPin);
+}
 
 // Set up LED matrix
 int dataIn = 12;
@@ -68,10 +76,10 @@ enum Directions movementDirection = UP;
 bool isCoordEqual(Coord coord1, Coord coord2){
   // Checks if two coordinates are equal.
   // INPUT:
-  //  coord1 = The first coordinate to check.
-  //  coord2 = The second coordinate to check.
+  //  coord1 = The first coordinate to compare.
+  //  coord2 = The second coordinate to compare.
   // OUTPUT:
-  //  A booleans displaying true if the coordinates are equal and false otherwise.
+  //  A booleans. Displays true if the coordinates are equal and false otherwise.
   return (coord1.x == coord2.x) && (coord1.y == coord2.y);
 }
 
@@ -98,7 +106,7 @@ void propogate(Coord body[], int bodyLength, Coord coord){
   // add head to body array
   body[0] = coord;
   
-  // display head
+  // add head to display
   disp.setLed(0, body[0].x, body[0].y, true);
 }
 
@@ -177,7 +185,7 @@ Coord foodLocation;
 void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
   // Spawns a single unit of food at a random location.
   // INPUT:
-  //  foodLocation = A pointer, pointing to the adress of the coordinate of the food.
+  //  foodLocation = A pointer, pointing to the address of the coordinate of the food.
   //  body = The snake body.
   //  bodylength = The length of the snake body.
   
@@ -197,46 +205,65 @@ void spawnFood(Coord *foodLocation, Coord body[], int bodyLength){
 }
 
 void spawnBody(Coord body[], int *bodyLength){
-  // Spawns a snake at the center of the display (roughly).
+  // Spawns a snake at a random point on the display).
   // INPUTS:
   //  body = The snake body.
   //  bodyLength = A pointer, pointing to the address of the length of the snake.
   *bodyLength = INITIAL_BODY_LENGTH; 
   
-  body[0].x = 5;
-  body[0].y = 5;
+  body[0].x = random(0,7);
+  body[0].y = random(0,7);
+
+  for (int i = 1; i < *bodyLength; i++){
+    body[i] = body[0];
+  }
 
   disp.setLed(0, body[0].x, body[0].y, true);
 }
 
-void despawnBody(Coord body[], int bodyLength){
+void despawnBody(Coord body[], int *bodyLength){
   // Despawns a snake, removing it from the display.
   // INPUT:
   //  body = The snake body.
   //  bodyLength = The length of the snake.
-  for (int i = 0; i < bodyLength; i++){
+  for (int i = 0; i < *bodyLength; i++){
     disp.setLed(0, body[i].x, body[i].y, false);
   }
+
+  *bodyLength = 0;
 }
 
-void blinkBody(Coord body[], int bodyLength){
-  // Blink a snake body once
+void blinkBody(Coord body[], int bodyLength, int times){
+  // Blinks a snake body.
   // INPUT:
   //  body = The snake body.
   //  bodyLength = The length of the snake.
+  //  times = The amount of times to blink the snake body.
   int i;
+  int j;
+
+  for (i = 0; i < times; i++){
   
-  for (i = 0; i < bodyLength; i++){
-    disp.setLed(0, body[i].x, body[i].y, false);
+    for (j = 0; j < bodyLength; j++){
+      disp.setLed(0, body[j].x, body[j].y, false);
+    }
+  
+    delay(REFRESH_RATE * 2);
+  
+    for (j = 0; j < bodyLength; j++){
+      disp.setLed(0, body[j].x, body[j].y, true);
+    }
+  
+    delay(REFRESH_RATE * 2);
   }
+}
 
-  delay(REFRESH_RATE * 2);
-
-  for (i = 0; i < bodyLength; i++){
-    disp.setLed(0, body[i].x, body[i].y, true);
+void waitForJoyStickPress(){
+  // Debugging tool
+  blinkBody(body, bodyLength, 1);
+  while(digitalRead(SWPin) == HIGH){
+    delay(100);
   }
-
-  delay(REFRESH_RATE * 2);
 }
 
 void setup() {
@@ -259,7 +286,10 @@ void setup() {
 
   // spawn food
   spawnFood(&foodLocation, body, bodyLength);
-  
+
+  // calibrate joystick
+  calibrateJoystick();
+ 
 }
 
 void loop() {
@@ -314,35 +344,17 @@ void loop() {
 /*
   // USER INPUT:  JOYSTICK METHOD (NEW)
 
-  if ( (Y > abs(X - 512) + 512) && (Y > 550) ){
+  if ( (Y > abs(X - centre.x) + centre.x) && (Y > centre.y + joystickAccuracy) ){
     selectedDirection = DOWN;
-  } else if ( (Y < -abs(X - 512) + 512 ) && (Y < 450) ){
+  } else if ( (Y < -abs(X - centre.x) + centre.x ) && (Y < centre.y - joystickAccuracy) ){
     selectedDirection = UP;
-  } else if (X < 450) {
+  } else if (X < centre.x - joystickAccuracy) {
     selectedDirection = LEFT;
-  } else if (X > 550) {
+  } else if (X > centre.x + joystickAccuracy) {
     selectedDirection = RIGHT;
   }
 */
 
-for (int i = 0; i < REFRESH_RATE; i+= 10){
-  X = analogRead(XPin);
-  Y = analogRead(YPin);
-  
-  // USER INPUT: JOYSTICK METHOD (DYNAMIC)
-
-  if ( (Y > abs(X - 512) + 512) && (Y > 550) ){
-    selectedDirection = DOWN;
-  } else if ( (Y < -abs(X - 512) + 512 ) && (Y < 450) ){
-    selectedDirection = UP;
-  } else if (X < 450) {
-    selectedDirection = LEFT;
-  } else if (X > 550) {
-    selectedDirection = RIGHT;
-  }
-  
-  delay(10);
-}
 /*
   for (int i = 0; i < REFRESH_RATE; i+= 10){
     X = analogRead(XPin);
@@ -367,6 +379,27 @@ for (int i = 0; i < REFRESH_RATE; i+= 10){
   centre.y = Y;
 */
 
+  // Get user input
+
+  for (int i = 0; i < REFRESH_RATE; i+= 10){
+    X = analogRead(XPin);
+    Y = analogRead(YPin);
+    
+    // USER INPUT:  JOYSTICK METHOD (NEW)
+  
+    if ( (Y > abs(X - centre.x) + centre.x) && (Y > centre.y + joystickAccuracy) ){
+      selectedDirection = DOWN;
+    } else if ( (Y < -abs(X - centre.x) + centre.x ) && (Y < centre.y - joystickAccuracy) ){
+      selectedDirection = UP;
+    } else if (X < centre.x - joystickAccuracy) {
+      selectedDirection = LEFT;
+    } else if (X > centre.x + joystickAccuracy) {
+      selectedDirection = RIGHT;
+    }
+    
+    delay(10);
+  }
+
   // process direction
   if ( (selectedDirection != movementDirection) && (selectedDirection != oppositeDirection(movementDirection)) ){
     movementDirection = selectedDirection;
@@ -381,28 +414,32 @@ for (int i = 0; i < REFRESH_RATE; i+= 10){
     // move snake
     
     propogate(body, bodyLength, coordToCheck);
-  } else if (objectAtCoord == FOOD){
-        
-    if (bodyLength < MAX_BODY_LENGTH){
-      bodyLength++;
-    }
     
+  } else if (objectAtCoord == FOOD){
+
+    Coord tailCoord = body[bodyLength - 1]; 
+         
     // move snake
     propogate(body, bodyLength, coordToCheck);
 
+    // increase snake
+    if (bodyLength < MAX_BODY_LENGTH){
+      bodyLength++;
+      body[bodyLength - 1] = tailCoord;
+    }
+    
     // respawn food
     spawnFood(&foodLocation, body, bodyLength);
 
     // add to score
     score++;
+    
   } else if (objectAtCoord == BODY){
     // game over
         
-    blinkBody(body, bodyLength);
-    blinkBody(body, bodyLength);
-    blinkBody(body, bodyLength);
+    blinkBody(body, bodyLength, 3);
     
-    despawnBody(body, bodyLength);
+    despawnBody(body, &bodyLength);
 
     //despawn food
     disp.setLed(0, foodLocation.x, foodLocation.y, false);
@@ -414,9 +451,7 @@ for (int i = 0; i < REFRESH_RATE; i+= 10){
     spawnBody(body, &bodyLength);
     spawnFood(&foodLocation, body, bodyLength);
     
-    delay(5000);
+    delay(3000);
   } 
   
-  // buffer
-  // delay(REFRESH_RATE);
 }
