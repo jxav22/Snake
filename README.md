@@ -1,5 +1,5 @@
 # Snake
-A recreation of the game of snake for a MAX7219 LED dot matrix
+A recreation of the game of snake, using Arudinos
 
 ## Goals for this project
 * To develop my C++ skills, extending the knowledge I gained from my degree
